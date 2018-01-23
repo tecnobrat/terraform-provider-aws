@@ -3,12 +3,10 @@ package aws
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 )
@@ -174,21 +172,17 @@ func dataSourceAwsDynamoDbTable() *schema.Resource {
 }
 
 func dataSourceAwsDynamoDbTableRead(d *schema.ResourceData, meta interface{}) error {
-	dynamodbconn := meta.(*AWSClient).dynamodbconn
+	conn := meta.(*AWSClient).dynamodbconn
 
-	name := d.Get("name").(string)
-	req := &dynamodb.DescribeTableInput{
-		TableName: aws.String(name),
-	}
-
-	log.Printf("[DEBUG] Reading DynamoDB Table: %s", req)
-	result, err := dynamodbconn.DescribeTable(req)
+	result, err := conn.DescribeTable(&dynamodb.DescribeTableInput{
+		TableName: aws.String(d.Get("name").(string)),
+	})
 
 	if err != nil {
-		return errwrap.Wrapf("Error retrieving DynamoDB table: {{err}}", err)
+		return fmt.Errorf("Error retrieving DynamoDB table: %s", err)
 	}
 
 	d.SetId(*result.Table.TableName)
 
-	return flattenAwsDynamoDbTableResource(d, meta, result.Table)
+	return flattenAwsDynamoDbTableResource(d, conn, result.Table)
 }
